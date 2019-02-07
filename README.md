@@ -1,2 +1,2 @@
-# MtOrmAnn
-ORM for Golang
+# MiTo Team OrmAnn
+ORM for Golang applications
