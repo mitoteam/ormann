@@ -7,8 +7,11 @@ type OrmObject interface {
 	TableName() string
 	GetFieldValue(field_name string) string
 	SetFieldValue(field_name string, value string)
+	GetFieldsList() []string
+	Save() OrmId
 }
 
+//region OrmObjectBase
 type OrmObjectBase struct {
   id OrmId
   data map[string]string
@@ -37,3 +40,8 @@ func (o *OrmObjectBase) SetFieldValue(field_name string, value string) {
 
 	o.data[field_name] = value
 }
+
+func (o *OrmObjectBase) Save() OrmId {
+  return 1;
+}
+//endregion

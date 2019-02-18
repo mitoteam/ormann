@@ -5,46 +5,77 @@ import (
 	"fmt"
 )
 
-type OrmCore struct
-{
-	cache map[string]OrmObject
+type ormCoreParameters map[string]string
 
+type ormCore struct
+{
+	storage OrmStorage
+	parameters ormCoreParameters
+
+	cache map[string]OrmObject
 	types map[string]reflect.Type
 }
 
-var core *OrmCore
+var core *ormCore
 
 /*
 ORM Core
 */
-func Core() *OrmCore{
+func Core() *ormCore {
 	if(core == nil) {
-		core = new(OrmCore)
+		core = new(ormCore)
 		core.init()
 	}
 
 	return core
 }
 
-func typed_nil_to_name(typedNil OrmObject) string{
-	var t = reflect.TypeOf(typedNil)
-
-	if(t.Kind() == reflect.Ptr){
-		t = t.Elem()
-	}
-
- return t.PkgPath() + "." + t.Name()
-}
-
 /*
 Initialization
 */
-func (core *OrmCore) init(){
+func (core *ormCore) init(){
+	core.parameters = make(ormCoreParameters)
 	core.cache = make(map[string]OrmObject)
 	core.types = make(map[string]reflect.Type)
 }
 
-func (core *OrmCore) RegisterType(typedNil OrmObject){
+func (core *ormCore) SetParam(name, value string) *ormCore {
+	core.parameters[name] = value
+
+	return core; //method chaining
+}
+
+/*
+Startup
+*/
+func (core *ormCore) Go(){
+	storage_type, ok := core.parameters["storage"]
+
+	if(!ok){
+		panic("\"storage\" parameter not set")
+	}
+
+	if storage_type == "mysql" {
+		//core.storage = &OrmMysqlStorage{}
+		core.storage = new(OrmMysqlStorage)
+		core.storage.Connect(&core.parameters)
+	}	else{
+		panic("unknown storage type")
+	}
+}
+
+/*
+Shutdown
+*/
+func (core *ormCore) Shutdown(){
+	if core.storage != nil {
+		if(core.storage.IsConnected()){
+			core.storage.Disconnect()
+		}
+	}
+}
+
+func (core *ormCore) RegisterType(typedNil OrmObject){
 	var t = reflect.TypeOf(typedNil)
 
 	if(t.Kind() == reflect.Ptr){
@@ -59,7 +90,7 @@ func (core *OrmCore) RegisterType(typedNil OrmObject){
 /*
 Create
 */
-func (core *OrmCore) Create(type_name string) *OrmObject{
+func (core *ormCore) Create(type_name string) *OrmObject{
  var o = reflect.New(core.types[type_name])
 
  fmt.Println(o)
@@ -70,13 +101,27 @@ func (core *OrmCore) Create(type_name string) *OrmObject{
 /*
 Load
 */
-func (core *OrmCore) Load(type_name string, id OrmId) *OrmObject{
+func (core *ormCore) Load(type_name string, id OrmId) *OrmObject{
   return nil;
 }
 
 /*
 Save
 */
-func (core *OrmCore) Save(o *OrmObject) OrmId{
+func (core *ormCore) Save(o *OrmObject) OrmId{
 	return 1;
 }
+
+func typed_nil_to_name(typedNil OrmObject) string{
+	var t = reflect.TypeOf(typedNil)
+
+	if(t.Kind() == reflect.Ptr){
+		t = t.Elem()
+	}
+
+	return t.PkgPath() + "." + t.Name()
+}
+
+//region sdfsdfg
+
+//endregion
