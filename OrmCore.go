@@ -71,8 +71,27 @@ func (core *ormCore) Shutdown(){
 	if core.storage != nil {
 		if(core.storage.IsConnected()){
 			core.storage.Disconnect()
+			core.storage = nil
 		}
 	}
+}
+
+/*
+returns storage or dies
+*/
+func (core *ormCore) s() OrmStorage{
+	if core.storage == nil {
+		core.Go()
+		return core.storage
+	}
+
+	if !core.storage.IsConnected() {
+		core.storage.Connect(&core.parameters)
+
+		return core.storage
+	}
+
+	return core.storage
 }
 
 func (core *ormCore) RegisterType(typedNil OrmObject){
@@ -90,7 +109,7 @@ func (core *ormCore) RegisterType(typedNil OrmObject){
 /*
 Create
 */
-func (core *ormCore) Create(type_name string) *OrmObject{
+func (core *ormCore) New(type_name string) *OrmObject{
  var o = reflect.New(core.types[type_name])
 
  fmt.Println(o)
