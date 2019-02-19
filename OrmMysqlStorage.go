@@ -2,7 +2,6 @@ package ormann
 
 import (
 	"database/sql"
-	"fmt"
 
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/mitoteam/mysqlann"
@@ -22,6 +21,7 @@ func (storage *OrmMysqlStorage) Connect(parameters *ormCoreParameters) {
 	db, err := sql.Open("mysql", storage.connection_string)
 	if err == nil {
 		storage.db = db
+		mysqlann.SetDB(db)
 	}
 }
 
@@ -43,6 +43,8 @@ func (storage *OrmMysqlStorage) PutObjectData(o *OrmObjectBase) OrmId {
 				q.Set(field_name, o.GetFieldValue(field_name))
 			}
 		}
+
+		q.Exec()
 	} else { //new object
 		var q = mysqlann.Insert(o.TableName)
 
@@ -52,10 +54,14 @@ func (storage *OrmMysqlStorage) PutObjectData(o *OrmObjectBase) OrmId {
 			}
 		}
 
-		fmt.Println("save user:", q.Sql())
+		id, err := q.Exec()
+		if err == nil {
+			o.id = OrmId(id)
+		}
+		//fmt.Println("save user:", q.Sql())
 	}
 
-	return 1
+	return o.id
 }
 
 func (storage *OrmMysqlStorage) GetObjectData(o *OrmObjectBase) {

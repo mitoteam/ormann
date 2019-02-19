@@ -1,6 +1,6 @@
 package ormann
 
-type OrmId uint64
+type OrmId int64
 
 type OrmObject interface {
 	Id() OrmId
