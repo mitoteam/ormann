@@ -95,5 +95,5 @@ func (storage *OrmMysqlStorage) DeleteObject(o *OrmObjectBase) {
 	}
 
 	var q = mysqlann.Delete(o.TableName).Where(o.IdFieldName, o.Id())
-	q.Sql()
+	q.Exec()
 }

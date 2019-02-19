@@ -24,6 +24,18 @@ type OrmObjectBase struct {
 
 func (o *OrmObjectBase) Init(){
 	if o.data == nil {
+		if len(o.TableName) == 0 {
+			panic ("no table name")
+		}
+
+		if len(o.FieldNames) == 0 {
+			panic("no fields")
+		}
+
+		if len(o.IdFieldName) == 0 {
+			o.IdFieldName = "ID"
+		}
+
 		o.data = make(map[string]interface{}, len(o.FieldNames))
 	}
 }
@@ -53,9 +65,9 @@ func (o *OrmObjectBase) SetFieldValue(field_name string, value interface{}) {
 }
 
 func (o *OrmObjectBase) Save() OrmId {
-	id := Core().s().PutObjectData(o)
+	o.id = Core().s().PutObjectData(o)
 
-	return id
+	return o.id
 }
 
 func (o *OrmObjectBase) Load(id OrmId) bool {
@@ -67,5 +79,9 @@ func (o *OrmObjectBase) MustLoad(id OrmId) {
 	if !Core().s().GetObjectData(o) {
 		panic("can not load object")
 	}
+}
+
+func (o *OrmObjectBase) Delete() {
+	Core().s().DeleteObject(o)
 }
 //endregion
