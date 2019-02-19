@@ -18,7 +18,11 @@ func (storage *OrmMysqlStorage) Connect(parameters *ormCoreParameters) {
 		"/" + (*parameters)["database"] +
 		"?charset=utf8"
 
-	db, err := sql.Open("mysql", storage.connection_string)
+	db, _ := sql.Open("mysql", storage.connection_string)
+
+	//check connection
+	err := db.Ping()
+
 	if err == nil {
 		storage.db = db
 		mysqlann.SetDB(db)
@@ -44,7 +48,7 @@ func (storage *OrmMysqlStorage) PutObjectData(o *OrmObjectBase) OrmId {
 			}
 		}
 
-		q.Exec()
+		q.Exec() //no ID changed by this query, so nothing to assign
 	} else { //new object
 		var q = mysqlann.Insert(o.TableName)
 
@@ -64,8 +68,25 @@ func (storage *OrmMysqlStorage) PutObjectData(o *OrmObjectBase) OrmId {
 	return o.id
 }
 
-func (storage *OrmMysqlStorage) GetObjectData(o *OrmObjectBase) {
+func (storage *OrmMysqlStorage) GetObjectData(o *OrmObjectBase) bool {
+	if o == nil {
+		panic("o is nil")
+	}
 
+	if o.id == 0 {
+		panic("can not load object with ID=0")
+	}
+
+	//prepare query
+	args := make([]string, len(o.FieldNames) + 1)
+	args[0] = "t" //table alias
+	copy(args[1:], o.FieldNames)
+	var q = mysqlann.Select(o.TableName, args...)
+
+	var err error
+	o.data, err = q.QueryRowMap()
+
+	return err != nil
 }
 
 func (storage *OrmMysqlStorage) DeleteObject(o *OrmObjectBase) {

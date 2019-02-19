@@ -6,8 +6,8 @@ type OrmObject interface {
 	Id() OrmId
 
 	HasFieldValue(field_name string) bool
-	GetFieldValue(field_name string) string
-	SetFieldValue(field_name string, value string)
+	GetFieldValue(field_name string) interface{}
+	SetFieldValue(field_name string, value interface{})
 
 	Save() OrmId
 }
@@ -15,7 +15,7 @@ type OrmObject interface {
 //region OrmObjectBase
 type OrmObjectBase struct {
   id OrmId
-  data map[string]string
+  data map[string]interface{}
 
   TableName   string
   FieldNames  []string
@@ -24,7 +24,7 @@ type OrmObjectBase struct {
 
 func (o *OrmObjectBase) Init(){
 	if o.data == nil {
-		o.data = make(map[string]string, len(o.FieldNames))
+		o.data = make(map[string]interface{}, len(o.FieldNames))
 	}
 }
 
@@ -38,7 +38,7 @@ func (o *OrmObjectBase) HasFieldValue(field_name string) bool {
 	return ok
 }
 
-func (o *OrmObjectBase) GetFieldValue(field_name string) string {
+func (o *OrmObjectBase) GetFieldValue(field_name string) interface{} {
 	var v, ok = o.data[field_name]
 
 	if(ok) {
@@ -48,11 +48,24 @@ func (o *OrmObjectBase) GetFieldValue(field_name string) string {
 	}
 }
 
-func (o *OrmObjectBase) SetFieldValue(field_name string, value string) {
+func (o *OrmObjectBase) SetFieldValue(field_name string, value interface{}) {
 	o.data[field_name] = value
 }
 
 func (o *OrmObjectBase) Save() OrmId {
-	return Core().s().PutObjectData(o)
+	id := Core().s().PutObjectData(o)
+
+	return id
+}
+
+func (o *OrmObjectBase) Load(id OrmId) bool {
+	o.id = id
+	return Core().s().GetObjectData(o)
+}
+
+func (o *OrmObjectBase) MustLoad(id OrmId) {
+	if !Core().s().GetObjectData(o) {
+		panic("can not load object")
+	}
 }
 //endregion

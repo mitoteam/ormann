@@ -6,6 +6,6 @@ type OrmStorage interface {
 	Disconnect()
 
 	PutObjectData(*OrmObjectBase) OrmId
-	GetObjectData(o *OrmObjectBase)
+	GetObjectData(o *OrmObjectBase) bool
 	DeleteObject(o *OrmObjectBase)
 }
