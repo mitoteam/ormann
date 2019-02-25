@@ -1,5 +1,9 @@
 package ormann
 
+import (
+	"log"
+)
+
 type ormCoreParameters map[string]string
 
 type ormCore struct {
@@ -51,6 +55,7 @@ func (core *ormCore) Go() {
 		//core.storage = &OrmMysqlStorage{}
 		core.storage = new(OrmMysqlStorage)
 		core.storage.Connect(&core.parameters)
+		log.Println("Connected to ORM storage")
 	} else {
 		panic("unknown storage type")
 	}
