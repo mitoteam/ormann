@@ -2,7 +2,8 @@ package ormann
 
 import (
 	"database/sql"
-
+	"strconv"
+	"reflect"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/mitoteam/mysqlann"
 )
@@ -83,6 +84,8 @@ func (storage *OrmMysqlStorage) GetObjectData(o *OrmObjectBase) bool {
 	copy(args[1:], o.FieldNames)
 	var q = mysqlann.Select(o.TableName, args...)
 
+	q.Where(o.IdFieldName, o.Id())
+
 	var err error
 	o.data, err = q.QueryRowMap()
 
@@ -96,4 +99,54 @@ func (storage *OrmMysqlStorage) DeleteObject(o *OrmObjectBase) {
 
 	var q = mysqlann.Delete(o.TableName).Where(o.IdFieldName, o.Id())
 	q.Exec()
+}
+
+func (storage *OrmMysqlStorage) SelectIdList(empty_o *OrmObjectBase) []OrmId {
+	var q = mysqlann.Select(empty_o.TableName, "t", empty_o.IdFieldName)
+
+	list, _ := q.QueryColumn()
+
+	id_list := make([]OrmId, len(list))
+
+	for i := 0; i < len(list); i++ {
+		id_list[i] = mysqlAnythingToOrmId(list[i])
+	}
+
+	return id_list
+}
+
+func mysqlAnythingToOrmId(value mysqlann.Anything) (r OrmId) {
+	switch v := value.(type) {
+	case uint:
+		r = OrmId(v)
+	case uint8:
+		r = OrmId(v)
+	case uint16:
+		r = OrmId(v)
+	case uint32:
+		r = OrmId(v)
+	case uint64:
+		r = OrmId(v)
+	case int:
+		r = OrmId(v)
+	case int8:
+		r = OrmId(v)
+	case int16:
+		r = OrmId(v)
+	case int32:
+		r = OrmId(v)
+	case int64:
+		r = OrmId(v)
+	case string:
+		int_v, err := strconv.ParseInt(v, 10, 64)
+		if err == nil {
+			r = OrmId(int_v)
+		} else {
+			panic("can't convert string to OrmId")
+		}
+	default:
+		panic("unknown type to convert to OrmId: " + reflect.TypeOf(value).Name())
+	}
+
+	return r
 }

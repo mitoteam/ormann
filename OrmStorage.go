@@ -8,4 +8,6 @@ type OrmStorage interface {
 	PutObjectData(*OrmObjectBase) OrmId
 	GetObjectData(o *OrmObjectBase) bool
 	DeleteObject(o *OrmObjectBase)
+
+	SelectIdList(empty_o *OrmObjectBase) []OrmId
 }

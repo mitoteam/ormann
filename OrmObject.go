@@ -1,5 +1,8 @@
 package ormann
 
+import "reflect"
+import "fmt"
+
 type OrmId int64
 
 type OrmObject interface {
@@ -10,6 +13,10 @@ type OrmObject interface {
 	SetFieldValue(field_name string, value interface{})
 
 	Save() OrmId
+  Load(id OrmId) bool
+	MustLoad(id OrmId)
+	Delete()
+	//Select() []OrmObject
 }
 
 //region OrmObjectBase
@@ -83,5 +90,38 @@ func (o *OrmObjectBase) MustLoad(id OrmId) {
 
 func (o *OrmObjectBase) Delete() {
 	Core().s().DeleteObject(o)
+}
+//endregion
+
+//region Fetching lists
+func (o *OrmObjectBase) Select(empty_o interface{}, list interface{}) {
+	id_list := Core().s().SelectIdList(o)
+	fmt.Println("id_list:", id_list)
+
+	var emptyObjectPointerT reflect.Type = reflect.TypeOf(empty_o)
+	var emptyObjectPointerV reflect.Value = reflect.ValueOf(empty_o)
+
+	//fmt.Println("t:", emptyObjectPointerT.Elem())
+
+	slice := reflect.MakeSlice(reflect.SliceOf(emptyObjectPointerT), len(id_list), len(id_list))
+
+	for i:=0; i<len(id_list); i++ {
+		newObjectPointerV := reflect.New(emptyObjectPointerT.Elem())
+		newObjectPointerV.Elem().Set(emptyObjectPointerV.Elem())
+
+		_, ok := emptyObjectPointerT.MethodByName("Load")
+		if ok {
+			newObjectPointerV.MethodByName("Load").Call([]reflect.Value{reflect.ValueOf(id_list[i])})
+		}
+
+		slice.Index(i).Set(newObjectPointerV)
+	}
+
+	listValue := reflect.ValueOf(list)
+	listValue.Elem().Set(slice)
+}
+
+func clone(i interface{}) interface{} {
+	return reflect.Indirect(reflect.ValueOf(i)).Interface()
 }
 //endregion
