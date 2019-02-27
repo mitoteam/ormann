@@ -2,13 +2,13 @@ package ormann
 
 import (
 	"log"
+	"reflect"
 )
-
-type ormCoreParameters map[string]string
 
 type ormCore struct {
 	storage    OrmStorage
 	parameters ormCoreParameters
+	registry   ormTypeRegistry
 
 	cache map[string]OrmObject //TBD
 }
@@ -32,6 +32,7 @@ Initialization
 */
 func (core *ormCore) init() {
 	core.parameters = make(ormCoreParameters)
+	core.registry = make(ormTypeRegistry)
 	core.cache = make(map[string]OrmObject)
 }
 
@@ -74,7 +75,7 @@ func (core *ormCore) Shutdown() {
 }
 
 /*
-returns storage or dies
+OrmStorage returns connected storage or dies
 */
 func (core *ormCore) s() OrmStorage {
 	if core.storage == nil {
@@ -89,4 +90,53 @@ func (core *ormCore) s() OrmStorage {
 	}
 
 	return core.storage
+}
+
+func (core *ormCore) registerOrmType(nilPointer interface{}, idFieldName, tableName string, fieldNames []string) (name string) {
+	name = reflect.TypeOf(nilPointer).Elem().String()
+
+	t := core.searchOrmType(name)
+
+	if t == nil {
+		if len(tableName) == 0 {
+			panic("no table name")
+		}
+
+		if len(fieldNames) == 0 {
+			panic("no fields")
+		}
+
+		if len(idFieldName) == 0 {
+			idFieldName = "ID"
+		}
+
+		newOrmType := ormType{
+			IdFieldName: idFieldName,
+			TableName:   tableName,
+			FieldNames:  fieldNames,
+		}
+
+		core.registry[name] = &newOrmType
+	}
+
+	return name
+}
+
+func (core *ormCore) searchOrmType(name string) (t *ormType) {
+	t, ok := core.registry[name]
+	if !ok {
+		return nil
+	}
+
+	return t
+}
+
+func (core *ormCore) getOrmType(name string) (t *ormType) {
+	t = core.searchOrmType(name)
+
+	if t == nil {
+		panic(name + "ORM type not registered")
+	}
+
+	return t
 }

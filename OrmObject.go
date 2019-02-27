@@ -1,9 +1,6 @@
 package ormann
 
 import "reflect"
-import "fmt"
-
-type OrmId int64
 
 type OrmObject interface {
 	Id() OrmId
@@ -13,7 +10,7 @@ type OrmObject interface {
 	SetFieldValue(field_name string, value interface{})
 
 	Save() OrmId
-  Load(id OrmId) bool
+	Load(id OrmId) bool
 	MustLoad(id OrmId)
 	Delete()
 	//Select() []OrmObject
@@ -21,33 +18,20 @@ type OrmObject interface {
 
 //region OrmObjectBase
 type OrmObjectBase struct {
-  id OrmId
-  data map[string]interface{}
-
-  TableName   string
-  FieldNames  []string
-  IdFieldName string
+	id          OrmId
+	data        map[string]interface{}
+	ormTypeName string
 }
 
-func (o *OrmObjectBase) Init(){
+func (o *OrmObjectBase) Init(nilPointer interface{}, idFieldName, tableName string, fieldNames []string) {
+	o.ormTypeName = Core().registerOrmType(nilPointer, idFieldName, tableName, fieldNames)
+
 	if o.data == nil {
-		if len(o.TableName) == 0 {
-			panic ("no table name")
-		}
-
-		if len(o.FieldNames) == 0 {
-			panic("no fields")
-		}
-
-		if len(o.IdFieldName) == 0 {
-			o.IdFieldName = "ID"
-		}
-
-		o.data = make(map[string]interface{}, len(o.FieldNames))
+		o.data = make(map[string]interface{}, len(fieldNames))
 	}
 }
 
-func (o *OrmObjectBase) Id() OrmId{
+func (o *OrmObjectBase) Id() OrmId {
 	return o.id
 }
 
@@ -60,9 +44,9 @@ func (o *OrmObjectBase) HasFieldValue(field_name string) bool {
 func (o *OrmObjectBase) GetFieldValue(field_name string) interface{} {
 	var v, ok = o.data[field_name]
 
-	if(ok) {
+	if ok {
 		return v
-	}	else {
+	} else {
 		return ""
 	}
 }
@@ -91,32 +75,30 @@ func (o *OrmObjectBase) MustLoad(id OrmId) {
 func (o *OrmObjectBase) Delete() {
 	Core().s().DeleteObject(o)
 }
+
 //endregion
 
 //region Fetching lists
-func Select(empty_o interface{}, list interface{}) {
-	var emptyObjectPointerT reflect.Type = reflect.TypeOf(empty_o)
-	var emptyObjectPointerV reflect.Value = reflect.ValueOf(empty_o)
+func Select(emptyO interface{}, list interface{}) {
+	var emptyObjectPointerT reflect.Type = reflect.TypeOf(emptyO)
+	var emptyObjectPointerV reflect.Value = reflect.ValueOf(emptyO)
 	var emptyObjectV reflect.Value = emptyObjectPointerV.Elem()
 
 	var oobValue = emptyObjectV.FieldByName("OrmObjectBase")
 
 	var o *OrmObjectBase = oobValue.Addr().Interface().(*OrmObjectBase)
 
-	id_list := Core().s().SelectIdList(o)
-	fmt.Println("id_list:", id_list)
+	idList := Core().s().SelectIdList(o)
 
-	//fmt.Println("t:", emptyObjectPointerT.Elem())
+	slice := reflect.MakeSlice(reflect.SliceOf(emptyObjectPointerT), len(idList), len(idList))
 
-	slice := reflect.MakeSlice(reflect.SliceOf(emptyObjectPointerT), len(id_list), len(id_list))
-
-	for i:=0; i<len(id_list); i++ {
+	for i := 0; i < len(idList); i++ {
 		newObjectPointerV := reflect.New(emptyObjectPointerT.Elem())
 		newObjectPointerV.Elem().Set(emptyObjectV)
 
 		_, ok := emptyObjectPointerT.MethodByName("Load")
 		if ok {
-			newObjectPointerV.MethodByName("Load").Call([]reflect.Value{reflect.ValueOf(id_list[i])})
+			newObjectPointerV.MethodByName("Load").Call([]reflect.Value{reflect.ValueOf(idList[i])})
 		}
 
 		slice.Index(i).Set(newObjectPointerV)
@@ -125,4 +107,5 @@ func Select(empty_o interface{}, list interface{}) {
 	listValue := reflect.ValueOf(list)
 	listValue.Elem().Set(slice)
 }
+
 //endregion

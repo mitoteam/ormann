@@ -2,10 +2,10 @@ package ormann
 
 import (
 	"database/sql"
-	"strconv"
-	"reflect"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/mitoteam/mysqlann"
+	"reflect"
+	"strconv"
 )
 
 type OrmMysqlStorage struct {
@@ -40,20 +40,22 @@ func (storage *OrmMysqlStorage) Disconnect() {
 }
 
 func (storage *OrmMysqlStorage) PutObjectData(o *OrmObjectBase) OrmId {
-	if o.Id() > 0 { //existing object
-		var q = mysqlann.Update(o.TableName).Where(o.IdFieldName, o.Id())
+	ot := Core().getOrmType(o.ormTypeName)
 
-		for _, field_name := range o.FieldNames {
+	if o.Id() > 0 { //existing object
+		var q = mysqlann.Update(ot.TableName).Where(ot.IdFieldName, o.Id())
+
+		for _, field_name := range ot.FieldNames {
 			if o.HasFieldValue(field_name) {
 				q.Set(field_name, o.GetFieldValue(field_name))
 			}
 		}
 
-		q.Exec() //no ID changed by this query, so nothing to assign
+		_, _ = q.Exec() //no ID changed by this query, so nothing to assign
 	} else { //new object
-		var q = mysqlann.Insert(o.TableName)
+		var q = mysqlann.Insert(ot.TableName)
 
-		for _, field_name := range o.FieldNames {
+		for _, field_name := range ot.FieldNames {
 			if o.HasFieldValue(field_name) {
 				q.Set(field_name, o.GetFieldValue(field_name))
 			}
@@ -78,13 +80,15 @@ func (storage *OrmMysqlStorage) GetObjectData(o *OrmObjectBase) bool {
 		panic("can not load object with ID=0")
 	}
 
-	//prepare query
-	args := make([]string, len(o.FieldNames) + 1)
-	args[0] = "t" //table alias
-	copy(args[1:], o.FieldNames)
-	var q = mysqlann.Select(o.TableName, args...)
+	ot := Core().getOrmType(o.ormTypeName)
 
-	q.Where(o.IdFieldName, o.Id())
+	//prepare query
+	args := make([]string, len(ot.FieldNames)+1)
+	args[0] = "t" //table alias
+	copy(args[1:], ot.FieldNames)
+	var q = mysqlann.Select(ot.TableName, args...)
+
+	q.Where(ot.IdFieldName, o.Id())
 
 	var err error
 	o.data, err = q.QueryRowMap()
@@ -97,22 +101,26 @@ func (storage *OrmMysqlStorage) DeleteObject(o *OrmObjectBase) {
 		panic("can not delete unsaved object")
 	}
 
-	var q = mysqlann.Delete(o.TableName).Where(o.IdFieldName, o.Id())
-	q.Exec()
+	ot := Core().getOrmType(o.ormTypeName)
+
+	var q = mysqlann.Delete(ot.TableName).Where(ot.IdFieldName, o.Id())
+	_, _ = q.Exec()
 }
 
 func (storage *OrmMysqlStorage) SelectIdList(empty_o *OrmObjectBase) []OrmId {
-	var q = mysqlann.Select(empty_o.TableName, "t", empty_o.IdFieldName)
+	ot := Core().getOrmType(empty_o.ormTypeName)
+
+	var q = mysqlann.Select(ot.TableName, "t", ot.IdFieldName)
 
 	list, _ := q.QueryColumn()
 
-	id_list := make([]OrmId, len(list))
+	idList := make([]OrmId, len(list))
 
 	for i := 0; i < len(list); i++ {
-		id_list[i] = mysqlAnythingToOrmId(list[i])
+		idList[i] = mysqlAnythingToOrmId(list[i])
 	}
 
-	return id_list
+	return idList
 }
 
 func mysqlAnythingToOrmId(value mysqlann.Anything) (r OrmId) {
