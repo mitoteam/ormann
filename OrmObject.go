@@ -94,12 +94,17 @@ func (o *OrmObjectBase) Delete() {
 //endregion
 
 //region Fetching lists
-func (o *OrmObjectBase) Select(empty_o interface{}, list interface{}) {
-	id_list := Core().s().SelectIdList(o)
-	fmt.Println("id_list:", id_list)
-
+func Select(empty_o interface{}, list interface{}) {
 	var emptyObjectPointerT reflect.Type = reflect.TypeOf(empty_o)
 	var emptyObjectPointerV reflect.Value = reflect.ValueOf(empty_o)
+	var emptyObjectV reflect.Value = emptyObjectPointerV.Elem()
+
+	var oobValue = emptyObjectV.FieldByName("OrmObjectBase")
+
+	var o *OrmObjectBase = oobValue.Addr().Interface().(*OrmObjectBase)
+
+	id_list := Core().s().SelectIdList(o)
+	fmt.Println("id_list:", id_list)
 
 	//fmt.Println("t:", emptyObjectPointerT.Elem())
 
@@ -107,7 +112,7 @@ func (o *OrmObjectBase) Select(empty_o interface{}, list interface{}) {
 
 	for i:=0; i<len(id_list); i++ {
 		newObjectPointerV := reflect.New(emptyObjectPointerT.Elem())
-		newObjectPointerV.Elem().Set(emptyObjectPointerV.Elem())
+		newObjectPointerV.Elem().Set(emptyObjectV)
 
 		_, ok := emptyObjectPointerT.MethodByName("Load")
 		if ok {
@@ -119,9 +124,5 @@ func (o *OrmObjectBase) Select(empty_o interface{}, list interface{}) {
 
 	listValue := reflect.ValueOf(list)
 	listValue.Elem().Set(slice)
-}
-
-func clone(i interface{}) interface{} {
-	return reflect.Indirect(reflect.ValueOf(i)).Interface()
 }
 //endregion
